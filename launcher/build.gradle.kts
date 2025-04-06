@@ -67,7 +67,7 @@ tasks.withType<JavaCompile> {
 }
 
 tasks.withType<ShadowJar> {
-    archiveBaseName.set("xminicraft-launcher")
+    archiveBaseName.set("xminicraftlauncher")
     archiveClassifier.set("")
 
     manifest {
