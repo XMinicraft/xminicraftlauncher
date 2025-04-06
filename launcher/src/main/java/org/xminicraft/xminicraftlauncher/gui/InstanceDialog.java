@@ -16,9 +16,14 @@ import org.xminicraft.xminicraftlauncher.version.Version;
 import javax.swing.*;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.TitledBorder;
+import javax.swing.event.ListDataEvent;
+import javax.swing.event.ListDataListener;
 import javax.swing.event.MenuKeyEvent;
 import javax.swing.event.MenuKeyListener;
 import javax.swing.table.AbstractTableModel;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.SimpleAttributeSet;
+import javax.swing.text.StyleConstants;
 import java.awt.*;
 import java.awt.event.ItemEvent;
 import java.awt.event.KeyAdapter;
@@ -155,7 +160,64 @@ public class InstanceDialog extends JDialog {
             contentPanel.add(versionCombo, new GridBagContrs().pos(1, 2).weight(1, 0).fill(true, false).insetsV(8, 0));
 
             this.add(contentPanel, new GridBagContrs().fill(true, false).weight(1, 0).pos(0, 1));
-            this.add(new JPanel(), new GridBagContrs().fill(true, true).weight(1, 1).pos(0, 2));
+
+            JTextPane logArea = new JTextPane();
+            DefaultListModel<String> logModel = XLauncher.getInstance().getInstanceManager().logs.computeIfAbsent(instance, key -> new DefaultListModel<>());
+            logModel.addListDataListener(new ListDataListener() {
+                private final SimpleAttributeSet attrs = new SimpleAttributeSet();
+
+                @Override
+                public void intervalAdded(ListDataEvent e) {
+                    try {
+                        String line = logModel.get(e.getIndex0());
+                        if (line.contains("DEBUG")) {
+                            StyleConstants.setForeground(attrs, Color.CYAN);
+                        } else if (line.contains("ERROR")) {
+                            StyleConstants.setForeground(attrs, Color.RED);
+                        } else if (line.contains("WARN") || line.contains("WARNING")) {
+                            StyleConstants.setForeground(attrs, Color.ORANGE);
+                        } else {
+                            StyleConstants.setForeground(attrs, Color.WHITE);
+                        }
+
+                        logArea.getDocument().insertString(logArea.getDocument().getLength(), line + "\n", attrs);
+                    } catch (BadLocationException ex) {
+                        ex.printStackTrace();
+                    }
+                }
+
+                @Override
+                public void intervalRemoved(ListDataEvent e) {
+                    logArea.setText("");
+                }
+
+                @Override
+                public void contentsChanged(ListDataEvent e) {
+                }
+            });
+
+            SimpleAttributeSet attrs = new SimpleAttributeSet();
+            for (int i = 0; i < logModel.getSize(); ++i) {
+                try {
+                    String line = logModel.get(i);
+                    if (line.contains("DEBUG")) {
+                        StyleConstants.setForeground(attrs, Color.CYAN);
+                    } else if (line.contains("ERROR")) {
+                        StyleConstants.setForeground(attrs, Color.RED);
+                    } else if (line.contains("WARN") || line.contains("WARNING")) {
+                        StyleConstants.setForeground(attrs, Color.ORANGE);
+                    } else {
+                        StyleConstants.setForeground(attrs, Color.WHITE);
+                    }
+
+                    logArea.getDocument().insertString(logArea.getDocument().getLength(), line + "\n", attrs);
+                } catch (BadLocationException ex) {
+                    ex.printStackTrace();
+                }
+            }
+
+            this.add(new JLabel("Logs"), new GridBagContrs().pos(0, 2).insetsV(8, 0).anchor(GridBagConstraints.NORTHWEST));
+            this.add(logArea, new GridBagContrs().fill(true, true).weight(1, 1).insetsV(8, 0).pos(0, 3));
         }
     }
 

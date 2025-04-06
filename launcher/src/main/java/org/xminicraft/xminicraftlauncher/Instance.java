@@ -10,7 +10,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 public class Instance {
@@ -91,10 +90,6 @@ public class Instance {
         rootNode.put("last_launch_time", this.lastLaunchTime);
         rootNode.put("total_time_played", this.totalTimePlayed);
         return rootNode.toString();
-    }
-
-    public static Instance load() {
-        return null;
     }
 
     public static class Property<T> {

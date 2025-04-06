@@ -18,3 +18,9 @@ java {
 application {
     mainClass.set("JavaCheck")
 }
+
+tasks.jar {
+    manifest {
+        attributes("Main-Class" to application.mainClass.get())
+    }
+}

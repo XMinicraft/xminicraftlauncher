@@ -10,7 +10,10 @@ import org.xminicraft.xminicraftlauncher.util.Signal;
 import org.xminicraft.xminicraftlauncher.version.Version;
 import org.xminicraft.xminicraftlauncher.version.VersionManager;
 
+import javax.swing.*;
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -29,6 +32,7 @@ public class InstanceManager {
     private final List<Instance> instances = new ArrayList<>();
     public final Signal<Void> loaded = new Signal<>();
     public final Set<String> groupNames = new HashSet<>();
+    public final Map<Instance, DefaultListModel<String>> logs = new HashMap<>();
 
     public void remove(Instance instance) {
         this.instances.remove(instance);
@@ -125,20 +129,30 @@ public class InstanceManager {
             javaPath = instance.javaInstallationPath.toString();
         }
 
-        int minAlloc = XLauncher.getInstance().getSettings().javaMinimumAlloc;
-        int maxAlloc = XLauncher.getInstance().getSettings().javaMaximumAlloc;
+        int minAlloc = -1;
+        int maxAlloc = -1;
 
         if (instance.overrideJavaMemory) {
             minAlloc = instance.javaMinimumMemoryAllocation;
             maxAlloc = instance.javaMaximumMemoryAllocation;
+        } else if (XLauncher.getInstance().getSettings().javaMemory) {
+            minAlloc = XLauncher.getInstance().getSettings().javaMinimumAlloc;
+            maxAlloc = XLauncher.getInstance().getSettings().javaMaximumAlloc;
         }
 
         List<String> command = new ArrayList<>();
         command.add(javaPath);
-        command.add("-Xms" + minAlloc + "m");
-        command.add("-Xmx" + maxAlloc + "m");
+        if (minAlloc != -1) {
+            command.add("-Xms" + minAlloc + "m");
+        }
+        if (maxAlloc != -1) {
+            command.add("-Xmx" + maxAlloc + "m");
+        }
         if (OperatingSystem.get() == OperatingSystem.OSX) {
             command.add("-XstartOnFirstThread");
+        }
+        if (instance.overrideJvmArguments) {
+            command.add(instance.jvmArgs);
         }
         command.add("-cp");
         command.add(Paths.get("versions/" + version.get().id + "/client.jar").toAbsolutePath().toString());
@@ -151,6 +165,7 @@ public class InstanceManager {
         if (!alone) {
             builder.inheritIO();
         }
+
         try {
             if (alone) {
                 new Thread(()->{
@@ -158,14 +173,21 @@ public class InstanceManager {
                         Process process = builder.start();
                         instance.runningProcess = process;
                         instance.lastLaunchTime = Instant.now().getEpochSecond();
+                        DefaultListModel<String> logModel = logs.computeIfAbsent(instance, (key) -> new DefaultListModel<>());
+                        logModel.clear();
 
-                        while (process.isAlive()) {
-                            try {
-                                Thread.sleep(1000);
-                            } catch (InterruptedException e) {
-                                e.printStackTrace();
-                            }
+                        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+                        String line;
+                        while ((line = reader.readLine()) != null) {
+                            logModel.addElement(line);
                         }
+//                        while (process.isAlive()) {
+//                            try {
+//                                Thread.sleep(1000);
+//                            } catch (InterruptedException e) {
+//                                e.printStackTrace();
+//                            }
+//                        }
                         instance.isRunning.set(false);
                         instance.runningProcess = null;
                     } catch (IOException e) {
