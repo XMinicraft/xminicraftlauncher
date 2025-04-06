@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.xminicraft.xminicraftlauncher.util.FileUtils;
+import org.xminicraft.xminicraftlauncher.util.OperatingSystem;
 import org.xminicraft.xminicraftlauncher.util.Signal;
 import org.xminicraft.xminicraftlauncher.version.Version;
 import org.xminicraft.xminicraftlauncher.version.VersionManager;
@@ -16,7 +17,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -133,14 +133,20 @@ public class InstanceManager {
             maxAlloc = instance.javaMaximumMemoryAllocation;
         }
 
-        builder.command(
-                javaPath,
-                "-Xms" + minAlloc + "m",
-                "-Xmx" + maxAlloc + "m",
-                "-cp",
-                Paths.get("versions/" + version.get().id + "/client.jar").toAbsolutePath().toString(),
-                versionManager.getMainClass(version.get()), "--savedir",
-                XLauncher.getInstance().getInstancesPath().resolve(instance.name).resolve("save_data").toAbsolutePath().toString());
+        List<String> command = new ArrayList<>();
+        command.add(javaPath);
+        command.add("-Xms" + minAlloc + "m");
+        command.add("-Xmx" + maxAlloc + "m");
+        if (OperatingSystem.get() == OperatingSystem.OSX) {
+            command.add("-XstartOnFirstThread");
+        }
+        command.add("-cp");
+        command.add(Paths.get("versions/" + version.get().id + "/client.jar").toAbsolutePath().toString());
+        command.add(versionManager.getMainClass(version.get()));
+        command.add("--savedir");
+        command.add(XLauncher.getInstance().getInstancesPath().resolve(instance.name).resolve("save_data").toAbsolutePath().toString());
+
+        builder.command(command);
         builder.directory(XLauncher.getInstance().getInstancesPath().resolve(instance.name).resolve("save_data").toFile());
         if (!alone) {
             builder.inheritIO();
