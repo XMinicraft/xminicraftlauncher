@@ -26,11 +26,13 @@ public class DownloadJavaTask extends Task {
     private final JavaRuntime runtime;
     private final URI uri;
     private final int size;
+    private final Runnable onFinished;
 
-    public DownloadJavaTask(JavaRuntime runtime) {
+    public DownloadJavaTask(JavaRuntime runtime, Runnable onFinished) {
         this.runtime = runtime;
         this.uri = URI.create(runtime.url);
         this.size = runtime.size;
+        this.onFinished = onFinished;
     }
 
     @Override
@@ -69,12 +71,10 @@ public class DownloadJavaTask extends Task {
                         Files.newOutputStream(outP)
                 );
 
-                // Buffer for downloading
-                byte[] buffer = new byte[4096];
+                byte[] buffer = new byte[8096];
                 int bytesRead;
                 long totalBytesRead = 0;
 
-                // Read and write file while updating progress
                 while ((bytesRead = inputStream.read(buffer)) != -1) {
                     if (this.aborted) {
                         outputStream.close();
@@ -86,7 +86,6 @@ public class DownloadJavaTask extends Task {
                     outputStream.write(buffer, 0, bytesRead);
                     totalBytesRead += bytesRead;
 
-                    // Calculate and display progress in console
                     int percent = (int) ((totalBytesRead * 100) / this.size);
                     this.setStatus("Download progress: " + percent + "% (" + formatBytes(totalBytesRead) + " / " + formatBytes(this.size) + ")");
                     this.setProgress(percent, 100);
@@ -123,16 +122,13 @@ public class DownloadJavaTask extends Task {
                     this.setStatus("Unzipping " + entry.getName());
                     this.setProgress(0, 100);
 
-                    // Create directories if the entry is a directory
                     if (entry.isDirectory()) {
                         newFile.mkdirs();
                         continue;
                     }
 
-                    // Ensure parent directories exist for files
                     newFile.getParentFile().mkdirs();
 
-                    // Write file content
                     try (FileOutputStream fos = new FileOutputStream(newFile)) {
                         int len;
                         while ((len = zis.read(buffer)) > 0) {
@@ -155,8 +151,11 @@ public class DownloadJavaTask extends Task {
             e.printStackTrace();
             this.setStatus("Download failed");
             this.setProgress(100, 100);
+            this.abortFinished.emit();
+            return;
         }
 
+        this.onFinished.run();
         this.finished.emit();
     }
 

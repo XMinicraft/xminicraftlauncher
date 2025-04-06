@@ -319,11 +319,12 @@ public class SettingsDialog extends JDialog {
             this.table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
             this.downloadButton = new JButton(Language.translate("Download"));
-            this.downloadButton.addActionListener(e -> new JavaDownloadDialog(settingsDialog));
-
             this.removeButton = new JButton(Language.translate("Remove"));
             this.refreshButton = new JButton(Language.translate("Refresh"));
             this.refreshButton.addActionListener(e -> tableModel.refresh());
+            this.downloadButton.addActionListener(e -> new JavaDownloadDialog(settingsDialog, () -> {
+                refreshButton.doClick();
+            }));
 
             this.searchField = new JTextField();
             this.searchField.putClientProperty("JTextField.placeholderText", Language.translate("Search..."));

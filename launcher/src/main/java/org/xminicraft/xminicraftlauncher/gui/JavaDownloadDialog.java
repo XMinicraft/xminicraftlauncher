@@ -26,7 +26,7 @@ public class JavaDownloadDialog extends JDialog {
     private final JButton downloadButton;
     private final JButton cancelButton;
 
-    public JavaDownloadDialog(JDialog owner) {
+    public JavaDownloadDialog(JDialog owner, Runnable onFinished) {
         super(owner, Language.translate("Download Java"));
         this.setModalityType(ModalityType.APPLICATION_MODAL);
 
@@ -52,7 +52,10 @@ public class JavaDownloadDialog extends JDialog {
 
         this.downloadButton = new JButton(Language.translate("Download"));
         this.downloadButton.addActionListener(e -> {
-            LauncherGui.getInstance().startTask(this, new DownloadJavaTask(this.tableModel.getRuntime(this.table.getSelectedRow())));
+            LauncherGui.getInstance().startTask(this, new DownloadJavaTask(this.tableModel.getRuntime(this.table.getSelectedRow()), () -> {
+                this.dispose();
+                onFinished.run();
+            }));
         });
 
         this.cancelButton = new JButton(Language.translate("Cancel"));
